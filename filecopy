@@ -1,0 +1,48 @@
+const fs = require('fs');
+const { promisify } = require('util');
+
+const stat = promisify(fs.stat);
+const readFile = promisify(fs.readFile);
+const writeFile = promisify(fs.writeFile);
+
+const sourceFilePath = 'soursefile/test.mp4';
+const destinationFilePath = 'des/test.mp4';
+
+async function copyFileWithProgress() {
+  try {
+    // Get the size of the source file
+    const sourceFileStats = await stat(sourceFilePath);
+    const fileSize = sourceFileStats.size;
+  
+    // Set the chunk size to 1MB (you can adjust this value as per your preference)
+    const chunkSize = 1024 * 1024;
+  
+    let bytesCopied = 0;
+  
+    // Create readable and writable streams
+    const sourceStream = fs.createReadStream(sourceFilePath);
+    const destinationStream = fs.createWriteStream(destinationFilePath);
+  
+    // Register the 'data' event to track the progress
+    sourceStream.on('data', chunk => {
+      bytesCopied += chunk.length;
+      const progress = Math.round((bytesCopied / fileSize) * 100);
+      console.log(`Progress: ${progress}%`);
+    });
+  
+    // Copy the file using chunks
+    sourceStream.pipe(destinationStream);
+  
+    // Wait for the copy operation to complete
+    await new Promise((resolve, reject) => {
+      destinationStream.on('finish', resolve);
+      destinationStream.on('error', reject);
+    });
+  
+    console.log('File copied successfully!');
+  } catch (error) {
+    console.error('An error occurred:', error);
+  }
+}
+
+copyFileWithProgress();
